@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+
+    
+    
+  <url>
+    <loc>http://yoursite.com/2016/11/25/Android%E4%B9%8BBinder%E6%9C%BA%E5%88%B6/</loc>
+    <lastmod>2016-11-25T11:29:42.626Z</lastmod>
+    <data>
+        <display>
+        <title>Android之Binder机制</title>
+        <pubTime>2016-11-25T11:27:26.000Z</pubTime>
+        
+         
+           
+             
+              <breadCrumb title="Android" url="http://yoursite.com/categories/Android/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://yoursite.com/2016/11/25/Java%E4%B9%8BAnnotation/</loc>
+    <lastmod>2016-11-25T11:28:15.564Z</lastmod>
+    <data>
+        <display>
+        <title>Java之Annotation</title>
+        <pubTime>2016-11-25T10:54:22.000Z</pubTime>
+        
+         
+           
+             
+              <breadCrumb title="Java" url="http://yoursite.com/categories/Java/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>http://yoursite.com/2016/11/25/%E3%80%8A%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3JVM%E3%80%8B-%E7%B1%BB%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6/</loc>
+    <lastmod>2016-11-25T11:28:06.623Z</lastmod>
+    <data>
+        <display>
+        <title>《深入理解JVM》--类加载机制</title>
+        <pubTime>2016-11-25T11:03:19.000Z</pubTime>
+        
+         
+           
+             
+              <breadCrumb title="Java" url="http://yoursite.com/categories/Java/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+    
+</urlset>
