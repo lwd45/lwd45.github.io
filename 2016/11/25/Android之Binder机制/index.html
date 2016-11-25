@@ -1,0 +1,753 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Hexo, NexT" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="前言
+无聊看了下别人的面试题，发现binder经常被问到，于是打算将它写下了方便明年面试的时候复习。而且我发现有些东西看了就忘（就像binder之前看了N遍）如果你写下来的话就不会那么容易忘了（自我安慰…）
+
+概述Binder一个实现了IBinder接口的类，从IPC角度来看，他是Android中的一种跨进程通讯方式
+
+从Android Framework角度看，他是ServiceManager链">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android之Binder机制">
+<meta property="og:url" content="http://yoursite.com/2016/11/25/Android之Binder机制/index.html">
+<meta property="og:site_name" content="LWD45's Blog">
+<meta property="og:description" content="前言
+无聊看了下别人的面试题，发现binder经常被问到，于是打算将它写下了方便明年面试的时候复习。而且我发现有些东西看了就忘（就像binder之前看了N遍）如果你写下来的话就不会那么容易忘了（自我安慰…）
+
+概述Binder一个实现了IBinder接口的类，从IPC角度来看，他是Android中的一种跨进程通讯方式
+
+从Android Framework角度看，他是ServiceManager链">
+<meta property="og:image" content="http://upload-images.jianshu.io/upload_images/3311132-ad137ff59920a7e2.gif?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:updated_time" content="2016-11-25T11:29:42.626Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Android之Binder机制">
+<meta name="twitter:description" content="前言
+无聊看了下别人的面试题，发现binder经常被问到，于是打算将它写下了方便明年面试的时候复习。而且我发现有些东西看了就忘（就像binder之前看了N遍）如果你写下来的话就不会那么容易忘了（自我安慰…）
+
+概述Binder一个实现了IBinder接口的类，从IPC角度来看，他是Android中的一种跨进程通讯方式
+
+从Android Framework角度看，他是ServiceManager链">
+<meta name="twitter:image" content="http://upload-images.jianshu.io/upload_images/3311132-ad137ff59920a7e2.gif?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2016/11/25/Android之Binder机制/"/>
+
+
+
+
+
+  <title> Android之Binder机制 | LWD45's Blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?bacc75082edf992fbecf549610604e4a";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">LWD45's Blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">我曾经路过你的世界，不是我不停留，而是你不肯收留！</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+  <link itemprop="mainEntityOfPage" href="http://yoursite.com/2016/11/25/Android之Binder机制/">
+
+  <span style="display:none" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <meta itemprop="name" content="LWD45">
+    <meta itemprop="description" content="">
+    <meta itemprop="image" content="/images/avatar.png">
+  </span>
+
+  <span style="display:none" itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+    <meta itemprop="name" content="LWD45's Blog">
+    <span style="display:none" itemprop="logo" itemscope itemtype="http://schema.org/ImageObject">
+      <img style="display:none;" itemprop="url image" alt="LWD45's Blog" src="">
+    </span>
+  </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Android之Binder机制
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2016-11-25T19:27:26+08:00">
+                2016-11-25
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+              <span class="post-meta-divider">|</span>
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android/" itemprop="url" rel="index">
+                    <span itemprop="name">Android</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <a href="/2016/11/25/Android之Binder机制/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/25/Android之Binder机制/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><blockquote>
+<p>无聊看了下别人的面试题，发现binder经常被问到，于是打算将它写下了方便明年面试的时候复习。而且我发现有些东西看了就忘（就像binder之前看了N遍）如果你写下来的话就不会那么容易忘了（自我安慰…）</p>
+</blockquote>
+<h3 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h3><p>Binder一个实现了IBinder接口的类，从IPC角度来看，他是Android中的一种跨进程通讯方式</p>
+<ul>
+<li>从Android Framework角度看，他是ServiceManager链接各种Manager和相应ManagerService的桥梁</li>
+<li>从Android应用层角度来看，Binder是客户端和服务端进行通信的媒介</li>
+</ul>
+<p><strong>下面用AIDL分析Binder的工作机制 </strong></p>
+<ol>
+<li>首先创建以下三个类<code>Student.java</code> <code>Student.aidl</code> <code>ShowMessage.aidl</code>代码</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div></pre></td><td class="code"><pre><div class="line">//Student.java</div><div class="line">public class Student implements Parcelable&#123;</div><div class="line">    public String name;</div><div class="line">    public String id;</div><div class="line"></div><div class="line">    public Student(String name, String id) &#123;</div><div class="line">        this.name = name;</div><div class="line">        this.id = id;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    protected Student(Parcel in) &#123;</div><div class="line">        name = in.readString();</div><div class="line">        id = in.readString();</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    public static final Creator&lt;Student&gt; CREATOR = new Creator&lt;Student&gt;() &#123;</div><div class="line">        @Override</div><div class="line">        public Student createFromParcel(Parcel in) &#123;</div><div class="line">            return new Student(in);</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        @Override</div><div class="line">        public Student[] newArray(int size) &#123;</div><div class="line">            return new Student[size];</div><div class="line">        &#125;</div><div class="line">    &#125;;</div><div class="line"></div><div class="line">    @Override</div><div class="line">    public int describeContents() &#123;</div><div class="line">        return 0;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    @Override</div><div class="line">    public void writeToParcel(Parcel dest, int flags) &#123;</div><div class="line">        dest.writeString(name);</div><div class="line">        dest.writeString(id);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    public String getName() &#123;</div><div class="line">        return name;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    public String getId() &#123;</div><div class="line">        return id;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">// Student.aidl</div><div class="line">package com.example.luoweidong.binder;</div><div class="line">parcelable Student;</div><div class="line"></div><div class="line">// ShowMessage.aidl</div><div class="line">package com.example.luoweidong.binder;</div><div class="line">import com.example.luoweidong.binder.Student;</div><div class="line">interface ShowMessage &#123;</div><div class="line">    String showMessage(in Student student);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>2: 然后在会看到在build/generated/source/aidl/debug系统会生成一个接口，代码如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div></pre></td><td class="code"><pre><div class="line">public interface ShowMessage extends android.os.IInterface &#123;</div><div class="line">    /**</div><div class="line">     * Local-side IPC implementation stub class.</div><div class="line">     */</div><div class="line">    public static abstract class Stub extends android.os.Binder implements com.example.luoweidong.binder.ShowMessage &#123;</div><div class="line">        private static final java.lang.String DESCRIPTOR = &quot;com.example.luoweidong.binder.ShowMessage&quot;;</div><div class="line"></div><div class="line">        /**</div><div class="line">         * Construct the stub at attach it to the interface.</div><div class="line">         */</div><div class="line">        public Stub() &#123;</div><div class="line">            this.attachInterface(this, DESCRIPTOR);</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        /**</div><div class="line">         * Cast an IBinder object into an com.example.luoweidong.binder.ShowMessage interface,</div><div class="line">         * generating a proxy if needed.</div><div class="line">         */</div><div class="line">        public static com.example.luoweidong.binder.ShowMessage asInterface(android.os.IBinder obj) &#123;</div><div class="line">            if ((obj == null)) &#123;</div><div class="line">                return null;</div><div class="line">            &#125;</div><div class="line">            android.os.IInterface iin = obj.queryLocalInterface(DESCRIPTOR);</div><div class="line">            if (((iin != null) &amp;&amp; (iin instanceof com.example.luoweidong.binder.ShowMessage))) &#123;</div><div class="line">                return ((com.example.luoweidong.binder.ShowMessage) iin);</div><div class="line">            &#125;</div><div class="line">            return new com.example.luoweidong.binder.ShowMessage.Stub.Proxy(obj);</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        @Override</div><div class="line">        public android.os.IBinder asBinder() &#123;</div><div class="line">            return this;</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        @Override</div><div class="line">        public boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags) throws android.os.RemoteException &#123;</div><div class="line">            switch (code) &#123;</div><div class="line">                case INTERFACE_TRANSACTION: &#123;</div><div class="line">                    reply.writeString(DESCRIPTOR);</div><div class="line">                    return true;</div><div class="line">                &#125;</div><div class="line">                case TRANSACTION_showMessage: &#123;</div><div class="line">                    data.enforceInterface(DESCRIPTOR);</div><div class="line">                    com.example.luoweidong.binder.Student _arg0;</div><div class="line">                    if ((0 != data.readInt())) &#123;</div><div class="line">                        _arg0 = com.example.luoweidong.binder.Student.CREATOR.createFromParcel(data);</div><div class="line">                    &#125; else &#123;</div><div class="line">                        _arg0 = null;</div><div class="line">                    &#125;</div><div class="line">                    java.lang.String _result = this.showMessage(_arg0);</div><div class="line">                    reply.writeNoException();</div><div class="line">                    reply.writeString(_result);</div><div class="line">                    return true;</div><div class="line">                &#125;</div><div class="line">            &#125;</div><div class="line">            return super.onTransact(code, data, reply, flags);</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        private static class Proxy implements com.example.luoweidong.binder.ShowMessage &#123;</div><div class="line">            private android.os.IBinder mRemote;</div><div class="line"></div><div class="line">            Proxy(android.os.IBinder remote) &#123;</div><div class="line">                mRemote = remote;</div><div class="line">            &#125;</div><div class="line"></div><div class="line">            @Override</div><div class="line">            public android.os.IBinder asBinder() &#123;</div><div class="line">                return mRemote;</div><div class="line">            &#125;</div><div class="line"></div><div class="line">            public java.lang.String getInterfaceDescriptor() &#123;</div><div class="line">                return DESCRIPTOR;</div><div class="line">            &#125;</div><div class="line"></div><div class="line">            @Override</div><div class="line">            public java.lang.String showMessage(com.example.luoweidong.binder.Student student) throws android.os.RemoteException &#123;</div><div class="line">                android.os.Parcel _data = android.os.Parcel.obtain();</div><div class="line">                android.os.Parcel _reply = android.os.Parcel.obtain();</div><div class="line">                java.lang.String _result;</div><div class="line">                try &#123;</div><div class="line">                    _data.writeInterfaceToken(DESCRIPTOR);</div><div class="line">                    if ((student != null)) &#123;</div><div class="line">                        _data.writeInt(1);</div><div class="line">                        student.writeToParcel(_data, 0);</div><div class="line">                    &#125; else &#123;</div><div class="line">                        _data.writeInt(0);</div><div class="line">                    &#125;</div><div class="line">                    mRemote.transact(Stub.TRANSACTION_showMessage, _data, _reply, 0);</div><div class="line">                    _reply.readException();</div><div class="line">                    _result = _reply.readString();</div><div class="line">                &#125; finally &#123;</div><div class="line">                    _reply.recycle();</div><div class="line">                    _data.recycle();</div><div class="line">                &#125;</div><div class="line">                return _result;</div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        static final int TRANSACTION_showMessage = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    public java.lang.String showMessage(com.example.luoweidong.binder.Student student) throws android.os.RemoteException;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p><strong> 我们一点一点来分析他生成的源码 </strong> </p>
+<ul>
+<li>我们可以看到他是一个实现了<code>IInterface</code>的接口，想要在Binder中传输的接口都必须要实现他</li>
+<li>往下看声明了一个继承<code>Binder</code>的内部类Stub，当客户端和服务端在同一个进程时，方法调用不会调用<code>transact</code>，当不在同一个进程会调用<code>transact</code>(这个方法主要用来发送一些数据和一些描述它内容的元数据，对应有个<code>OnTransact</code>方法)，这些逻辑由代理类<code>Proxy</code>完成</li>
+<li>往下声明了一个<code>DESCRIPTOR</code>静态变量，他是用来标识<code>Binder</code>的</li>
+<li>往下声明了一个<code>asInterface</code>方法，当我们使用AIDL的时候就是用这方法将服务端返回的<code>IBinder</code>对象转换成我们需要的AIDL接口类型对象，这转换是区分是进程的，如果客户端和服务端在同一个进程那么这个方法返回的就是服务端的<code>Stub</code>本身，<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">android.os.IInterface iin = obj.queryLocalInterface(DESCRIPTOR);</div><div class="line">            if (((iin != null) &amp;&amp; (iin instanceof com.example.luoweidong.binder.ShowMessage))) &#123;</div><div class="line">                return ((com.example.luoweidong.binder.ShowMessage) iin);</div><div class="line">            &#125;</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>否者返回的是封装好的<code>Stub.proxy</code>对象<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">return new com.example.luoweidong.binder.ShowMessage.Stub.Proxy(obj);</div></pre></td></tr></table></figure></p>
+<ul>
+<li>往下声明了一个<code>asBinder</code>方法，就是返回当前<code>Binder</code>对象</li>
+<li>往下声明了一个<code>onTransact</code>方法，他会根据请求码响应客户端的请求，我们来分析一下<code>TRANSACTION_showMessage</code>这个请求码里面的代码他就是首先从<code>data</code>中取出调用该方法所需要的参数，如果没有置为空然后将结果写入<code>reply</code></li>
+<li>接下来看到了一个代理类<code>Proxy</code>,看他的构造方法传入了一个<code>remote</code> ，IBinder 类型的参数，也就是我们调用的<code>asInterface</code>时候传入来的客户端的IBinder类型的变量，所以他是运行在客户端，所以远程调用的时候不能在主线程中做耗时任务，接下来看他里面实现的方法<code>showMessage()</code>方法，<code>_data</code>是输入数据，<code>_reply</code>,是用来读取结果并将它赋值给<code>_result</code>返回给客户端</li>
+<li>倒数第二行代码我们看到定义了一个变量<code>TRANSACTION_showMessage</code>这个是用来标记我们的方法的</li>
+<li>在最后一行代码中我们可以看见，他声明了一个<code>showMessage （）</code>方法，这也是我们在AIDL文件中声明的方法</li>
+</ul>
+<p>分析完生成的源码之后我们发现其实还是挺简单的，所以遇到源码什么的不要慌，静下心来慢慢看就可以了</p>
+<h3 id="概括"><a href="#概括" class="headerlink" title="概括"></a>概括</h3><p>我们在平常中经常会用到<code>ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);</code>那么在这中间Binder是如何运转的呢</p>
+<ul>
+<li>我们知道任何Service使用之前，都要向SM注册（就像上面生成的字符串就是用来唯一标识的）</li>
+<li>当客户端要访问Service时，首先要向SM查询得到具体的引用，然后客户端就调用该引用去向服务端发送请求。</li>
+<li>而且Client、Server和Service Manager运行在用户空间，Binder驱动程序运行内核空间,因为不在同一个进程中的它们的资源是不共享的，所以Binder驱动程序的作用就是提供设备文件/dev/binder与用户空间交互，Client、Server和Service Manager通过open和ioctl文件操作函数与Binder驱动程序进行通信</li>
+</ul>
+<p>他们之间的关系如下（引用老罗的图）</p>
+<p><img src="http://upload-images.jianshu.io/upload_images/3311132-ad137ff59920a7e2.gif?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="Binder机制.gif"></p>
+<h3 id="想继续深入学习的话可以看这些文章"><a href="#想继续深入学习的话可以看这些文章" class="headerlink" title="想继续深入学习的话可以看这些文章"></a>想继续深入学习的话可以看这些文章</h3><ul>
+<li><a href="http://blog.csdn.net/luoshengyang/article/details/6618363" target="_blank" rel="external">http://blog.csdn.net/luoshengyang/article/details/6618363</a></li>
+<li><a href="http://blog.csdn.net/coding_glacier/article/details/7520199" target="_blank" rel="external">http://blog.csdn.net/coding_glacier/article/details/7520199</a></li>
+<li><a href="http://www.cnblogs.com/innost/archive/2011/01/09/1931456.html" target="_blank" rel="external">http://www.cnblogs.com/innost/archive/2011/01/09/1931456.html</a></li>
+<li><a href="https://github.com/lwd45/AIDLExample" target="_blank" rel="external">demo地址</a></li>
+</ul>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/11/25/《深入理解JVM》-类加载机制/" rel="next" title="《深入理解JVM》--类加载机制">
+                <i class="fa fa-chevron-left"></i> 《深入理解JVM》--类加载机制
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/11/25/Android之Binder机制/"
+           data-title="Android之Binder机制" data-url="http://yoursite.com/2016/11/25/Android之Binder机制/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="LWD45" />
+          <p class="site-author-name" itemprop="name">LWD45</p>
+          <p class="site-description motion-element" itemprop="description">LWD45's Blog,记录生活的点滴</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">3</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/lwd45" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#概述"><span class="nav-number">2.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#概括"><span class="nav-number">3.</span> <span class="nav-text">概括</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#想继续深入学习的话可以看这些文章"><span class="nav-number">4.</span> <span class="nav-text">想继续深入学习的话可以看这些文章</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">LWD45</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"lwd45"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+    
+    <script src="/lib/ua-parser-js/dist/ua-parser.min.js?v=0.7.9"></script>
+    <script src="/js/src/hook-duoshuo.js"></script>
+  
+
+
+
+
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+
+</body>
+</html>
